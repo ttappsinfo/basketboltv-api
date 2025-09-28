@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketbol Maç Programı</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --background-color: #f4f7f6;
+            --card-background: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --accent-color: #007bff;
+            --border-color: #e1e1e1;
+            --header-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: clamp(2rem, 6vw, 3rem);
+            color: var(--header-color);
+            margin: 0;
+        }
+        
+        .day-group h2 {
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid var(--accent-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 50px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+        }
+        
+        .match-card {
+            background-color: var(--card-background);
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .match-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            padding: 15px 20px;
+            background-color: #fafafa;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .teams-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            text-align: center;
+        }
+
+        .team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 120px;
+        }
+        
+        .team-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .team-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            line-height: 1.3;
+        }
+        
+        .vs-separator {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .card-footer {
+            padding: 15px 20px;
+            background-color: #fafafa;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        #error-message {
+            color: #d9534f;
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 20px;
+            background-color: #f2dede;
+            border: 1px solid #d9534f;
+            border-radius: 8px;
+        }
+        
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            color: #888;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Basketbol Maç Programı</h1>
+        </header>
+
+        <main id="main-content">
+            <div id="loading" class="loader"></div>
+            <div id="match-groups"></div>
+        </main>
+        
+        <footer>
+            <p>Veri Kaynağı: basketboltv-api.onrender.com</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiURL = 'https://basketboltv-api.onrender.com/';
+            const matchGroupsContainer = document.getElementById('match-groups');
+            const loading = document.getElementById('loading');
+            
+            // --- YENİ BÖLÜM: Logo haritasını doğrudan buraya ekliyoruz ---
+            const teamLogoMap = {
+                'Anadolu Efes': 'https://www.thesportsdb.com/images/media/team/badge/ly2g231758537717.png',
+                'Bahçeşehir Koleji': 'https://r2.thesportsdb.com/images/media/team/badge/twgvxv1726910272.png',
+                'Beşiktaş': 'https://r2.thesportsdb.com/images/media/team/badge/rx0o811667119583.png',
+                'Bursaspor': 'https://r2.thesportsdb.com/images/media/team/badge/mwt5rk1678898996.png',
+                'Büyükçekmece': 'https://r2.thesportsdb.com/images/media/team/badge/t2tekl1521143144.png',
+                'Esenler Erokspor': 'https://www.thesportsdb.com/images/media/team/badge/cddejp1758793966.png',
+                'Fenerbahçe': 'https://www.thesportsdb.com/images/media/team/badge/u6j0qb1758794065.png',
+                'Galatasaray': 'https://r2.thesportsdb.com/images/media/team/badge/s0648j1688557537.png',
+                'Karşıyaka': 'https://r2.thesportsdb.com/images/media/team/badge/mhh1y41739692642.png',
+                'Manisa': 'https://r2.thesportsdb.com/images/media/team/badge/dee2ms1740771670.png',
+                'Merkezefendi': 'https://r2.thesportsdb.com/images/media/team/badge/6y9rzp1634034160.png',
+                'Mersin': 'https://r2.thesportsdb.com/images/media/team/badge/yeb28u1722855223.png',
+                'Petkim Spor': 'https://r2.thesportsdb.com/images/media/team/badge/hlwgit1727704181.png',
+                'Tofaş': 'https://r2.thesportsdb.com/images/media/team/badge/l3t7p61698244996.png',
+                'Trabzonspor': 'https://r2.thesportsdb.com/images/media/team/badge/uh0csj1523092332.png',
+                'Türk Telekom': 'https://r2.thesportsdb.com/images/media/team/badge/89j3fk1726910405.png'
+            };
+
+            // Takım adını daha iyi eşleştirme için temizleyen fonksiyon
+            function cleanTeamName(name) {
+                if (!name) return '';
+                // Anahtar kelimeyi bulmaya çalış
+                const keywords = ['Efes', 'Bahçeşehir', 'Beşiktaş', 'Bursaspor', 'Büyükçekmece', 'Erokspor', 'Fenerbahçe', 'Galatasaray', 'Karşıyaka', 'Manisa', 'Merkezefendi', 'Mersin', 'Petkim', 'Tofaş', 'Trabzonspor', 'Telekom'];
+                const lowerName = name.toLowerCase();
+                for (const key of keywords) {
+                    if (lowerName.includes(key.toLowerCase())) {
+                        return key;
+                    }
+                }
+                return name; // Eşleşme yoksa orijinal ismi döndür
+            }
+
+            function findLogo(teamName) {
+                const defaultLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23cccccc' d='M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM169.4 145.2c-13.2-13.3-34.8-13.3-48.1 0s-13.3 34.8 0 48.1L209.9 282.4c-1.2-6.5-1-13.2.8-19.5l44-153.1c1.4-4.8 5.7-8.1 10.6-8.1s9.2 3.3 10.6 8.1l44 153.1c1.8 6.3 2 13 .8 19.5L217.4 193.3c-13.3-13.3-34.8-13.3-48.1 0zM389.1 217.4c-13.3-13.3-34.8-13.3-48.1 0L252.4 306.1c6.5 1.2 13.2 1 19.5-.8l153.1-44c4.8-1.4 8.1-5.7 8.1-10.6s-3.3-9.2-8.1-10.6l-153.1-44c-6.3-1.8-13-2-19.5-.8L341.1 169.4c13.3-13.3 34.8-13.3 48.1 0s13.3 34.8 0 48.1z'/%3E%3C/svg%3E";
+                if (!teamName) return defaultLogo;
+
+                const matchedKey = cleanTeamName(teamName);
+                return teamLogoMap[matchedKey] || defaultLogo;
+            }
+
+            async function fetchAndDisplayMatches() {
+                try {
+                    const response = await fetch(apiURL);
+                    if (!response.ok) throw new Error(`API hatası: ${response.status}`);
+                    
+                    const data = await response.json();
+                    loading.style.display = 'none';
+
+                    if (data.error) throw new Error(data.error);
+                    if (data.length === 0) {
+                        matchGroupsContainer.innerHTML = '<p>Gösterilecek maç bulunamadı.</p>';
+                        return;
+                    }
+
+                    const groupedMatches = data.reduce((acc, matchString) => {
+                        const timeInfo = matchString.split(' | ')[0];
+                        let dayKey = timeInfo.split(' ')[0];
+                        if (!isNaN(dayKey.charAt(0))) {
+                             dayKey = timeInfo.split(' ').slice(0, 2).join(' ');
+                        }
+                        if (!acc[dayKey]) acc[dayKey] = [];
+                        acc[dayKey].push(matchString);
+                        return acc;
+                    }, {});
+
+                    const sortedDays = Object.keys(groupedMatches).sort((a, b) => {
+                        if (a === "Bugün") return -1;
+                        if (b === "Bugün") return 1;
+                        if (a === "Yarın") return -1;
+                        if (b === "Yarın") return 1;
+                        return a.localeCompare(b, 'tr');
+                    });
+                    
+                    for (const day of sortedDays) {
+                        const dayGroup = document.createElement('div');
+                        dayGroup.className = 'day-group';
+                        
+                        const title = document.createElement('h2');
+                        title.textContent = day;
+                        dayGroup.appendChild(title);
+                        
+                        const grid = document.createElement('div');
+                        grid.className = 'matches-grid';
+
+                        groupedMatches[day].forEach(matchString => {
+                            const parts = matchString.split(' | ');
+                            if (parts.length < 3) return;
+
+                            const timeInfo = parts[0].split(' ').pop();
+                            const teams = parts[1];
+                            const channel = parts[2];
+                            const [homeTeam, awayTeam] = teams.split(' - ').map(t => t.trim());
+                            
+                            const homeLogoUrl = findLogo(homeTeam);
+                            const awayLogoUrl = findLogo(awayTeam);
+                            
+                            const card = document.createElement('div');
+                            card.className = 'match-card';
+                            card.innerHTML = `
+                                <div class="card-header">
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path><path d="M13 7h-2v5.414l3.293 3.293 1.414-1.414L13 11.586z"></path></svg>
+                                    <span>${timeInfo}</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="teams-container">
+                                        <div class="team">
+                                            <img src="${homeLogoUrl}" class="team-logo">
+                                            <span class="team-name">${homeTeam}</span>
+                                        </div>
+                                        <span class="vs-separator">VS</span>
+                                        <div class="team">
+                                            <img src="${awayLogoUrl}" class="team-logo">
+                                            <span class="team-name">${awayTeam || ''}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M21 4H3c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h18c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zM3 18V6h18v12H3z"></path><path d="M9 10h6v2H9z"></path></svg>
+                                    <span>${channel}</span>
+                                </div>
+                            `;
+                            grid.appendChild(card);
+                        });
+                        
+                        dayGroup.appendChild(grid);
+                        matchGroupsContainer.appendChild(dayGroup);
+                    }
+
+                } catch (error) {
+                    loading.style.display = 'none';
+                    matchGroupsContainer.innerHTML = `<div id="error-message">Maç programı yüklenemedi. API sunucusunda bir sorun olabilir veya veri kaynağına ulaşılamıyor. Lütfen daha sonra tekrar deneyin.</div>`;
+                    console.error('Veri çekme hatası:', error);
+                }
+            }
+
+            fetchAndDisplayMatches();
+        });
+    </script>
+
+</body>
+</html>
